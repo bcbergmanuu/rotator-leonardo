@@ -31,7 +31,7 @@ void update () {
   else if((a == 1) && (b == 1) && (preva == 1) && (prevb == 0)) position--;
   else if((a == 1) && (b == 0) && (preva == 1) && (prevb == 1)) position++;
   else if((a == 0) && (b == 0) && (preva == 1) && (prevb == 0)) position++;
-  
+  else return;
   preva = a;
   prevb = b;  
   sei();
