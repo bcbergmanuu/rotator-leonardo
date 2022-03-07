@@ -1,49 +1,44 @@
 #include <Arduino.h>
+
+#include <util/atomic.h>
 //rotary encoder sketch for arduino leonardo
 
 #define pin_a 2
 #define pin_b 3
 
-int16_t position, prevposition;
-uint8_t a, b, preva, prevb;
+static volatile int16_t position, prevposition;
+static volatile uint8_t preva, prevb;
 
-void update () {
-  cli();
-  
-  uint8_t st_a = (PIND & (1<<PIND0)) >> PIND0;
-  uint8_t st_b = (PIND & (1<<PIND1)) >> PIND1;
-  
-  //switch has 11 => 00 illigal action
-  if((st_a != preva) && (st_b != prevb)) return;  
-  a = st_a;
-  b = st_b;
+#define ca 0 //current a
+#define cb 1 //current b
+#define pa 2 //past a
+#define pb 3 //past b
 
+void update () {  
+  uint8_t a, b;
+  a = (PIND & (1<<PIND0)) >> PIND0;
+  b = (PIND & (1<<PIND1)) >> PIND1;
   //noise causes multiple interrupts for same value
   if((a == preva) && (b == prevb)) return;  
-  
-  //check for previous a and b to skip illigal actions
-       if((a == 0) && (b == 1) && (preva == 0) && (prevb == 0)) position++;
-  else if((a == 1) && (b == 1) && (preva == 0) && (prevb == 1)) position++;
-  else if((a == 1) && (b == 0) && (preva == 0) && (prevb == 0)) position--;
-  else if((a == 0) && (b == 0) && (preva == 0) && (prevb == 1)) position--;
-
-  else if((a == 0) && (b == 1) && (preva == 1) && (prevb == 1)) position--;
-  else if((a == 1) && (b == 1) && (preva == 1) && (prevb == 0)) position--;
-  else if((a == 1) && (b == 0) && (preva == 1) && (prevb == 1)) position++;
-  else if((a == 0) && (b == 0) && (preva == 1) && (prevb == 0)) position++;
+  uint8_t r = 0;
+  if(a) r|= (1<<ca);
+  if(b) r|= (1<<cb);
+  if(preva) r |= (1<<pa);
+  if(prevb) r |= (1<<pb);
+  if((r == 2) || (r == 11) || (r == 13) || (r == 4)) position++;   
+  else if((r==14) || (r==7) || (r ==1) || (r == 8)) position--;
   else return;
   preva = a;
   prevb = b;  
-  sei();
  };
 
 
  ISR(INT0_vect) {  
-   update();
+   update();   
  }
 
  ISR(INT1_vect) {  
-   update();  
+   update();     
  }
 
 
@@ -77,6 +72,7 @@ void setup() {
   PRR0 |= (1<<PRTWI) | (1<<PRSPI) | (1<<PRADC);  
 }
 
+
 void loop()
 {     
   if(position != prevposition) {    
@@ -85,4 +81,6 @@ void loop()
     Serial.println(position);
     
   }   
+ 
+
 }
